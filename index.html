@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>전국 약국 정보 조회</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .pharmacy-card { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        .loading { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>💊 전국 약국 찾기</h1>
+    <div>
+        <input type="text" id="city" placeholder="시도 (예: 서울특별시)">
+        <input type="text" id="gu" placeholder="시군구 (예: 강남구)">
+        <button onclick="searchPharmacy()">검색</button>
+    </div>
+    <div id="results" style="margin-top: 20px;"></div>
+
+    <script>
+        async function searchPharmacy() {
+            const city = document.getElementById('city').value;
+            const gu = document.getElementById('gu').value;
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = '<p class="loading">정보를 불러오는 중...</p>';
+
+            try {
+                // 우리 서버리스 함수 호출 (CORS 문제 없음)
+                const response = await fetch(`/api/list?Q0=${city}&Q1=${gu}`);
+                const xmlText = await response.text();
+                
+                // XML 파싱
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                const items = xmlDoc.getElementsByTagName("item");
+
+                resultsDiv.innerHTML = '';
+                if (items.length === 0) {
+                    resultsDiv.innerHTML = '<p>검색 결과가 없습니다.</p>';
+                    return;
+                }
+
+                for (let item of items) {
+                    const name = item.getElementsByTagName("dutyName")[0]?.textContent;
+                    const tel = item.getElementsByTagName("dutyTel1")[0]?.textContent;
+                    const addr = item.getElementsByTagName("dutyAddr")[0]?.textContent;
+
+                    resultsDiv.innerHTML += `
+                        <div class="pharmacy-card">
+                            <strong>${name}</strong><br>
+                            📞 ${tel}<br>
+                            📍 ${addr}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = '<p style="color:red;">오류가 발생했습니다.</p>';
+            }
+        }
+    </script>
+</body>
+</html>
